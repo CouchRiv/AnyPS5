@@ -1,8 +1,61 @@
 #include "prx/libc/include/general/VabiMacros.hpp"
 #include <cstddef>
+#include <cstdint>
 #include <cstring>
 #include <cerrno>
 #include <string_view>
+
+namespace {
+
+bool ParseInetAddress(const char* text, std::uint32_t& address) {
+    std::uint64_t parts[4];
+    std::size_t count = 0;
+    bool digit = false;
+    char c = *text;
+    for (;;) {
+        if (c < '0' || c > '9') return false;
+        std::uint64_t value = 0;
+        unsigned base = 10;
+        digit = false;
+        if (c == '0') {
+            c = *++text;
+            if (c == 'x' || c == 'X') {
+                base = 16;
+                c = *++text;
+            } else {
+                base = 8;
+                digit = true;
+            }
+        }
+        for (;; c = *++text, digit = true) {
+            const char lower = static_cast<char>(c | 0x20);
+            if (c >= '0' && c <= '9') {
+                if (base == 8 && c >= '8') return false;
+                value = value * base + static_cast<unsigned>(c - '0');
+            } else if (base == 16 && lower >= 'a' && lower <= 'f') {
+                value = (value << 4) | static_cast<unsigned>(lower - 'a' + 10);
+            } else {
+                break;
+            }
+        }
+        parts[count++] = value;
+        if (c != '.') break;
+        if (count == 4 || value > 0xff) return false;
+        c = *++text;
+    }
+    if (c != '\0' && c != ' ' && (c < '\t' || c > '\r')) return false;
+    if (!digit) return false;
+    constexpr std::uint64_t limits[] = {UINT64_MAX, 0xffffff, 0xffff, 0xff};
+    std::uint64_t value = parts[count - 1];
+    if (value > limits[count - 1]) return false;
+    for (std::size_t index = 0; index + 1 < count; ++index) value |= parts[index] << (24 - 8 * index);
+    const std::uint8_t bytes[4] = {static_cast<std::uint8_t>(value >> 24), static_cast<std::uint8_t>(value >> 16),
+        static_cast<std::uint8_t>(value >> 8), static_cast<std::uint8_t>(value)};
+    std::memcpy(&address, bytes, sizeof(bytes));
+    return true;
+}
+
+}
 
 extern "C" {
 
@@ -18,6 +71,11 @@ char* APS5_VABI basename_nid_postfix(const char* path) {
     std::memcpy(buffer, name.data(), name.size());
     buffer[name.size()] = '\0';
     return buffer;
+}
+
+std::uint32_t APS5_VABI __inet_addr_nid_postfix(const char* text) {
+    std::uint32_t address;
+    return ParseInetAddress(text, address) ? address : 0xffffffff;
 }
 
 std::size_t APS5_VABI strnlen_nid_postfix(const char* text, std::size_t limit) {

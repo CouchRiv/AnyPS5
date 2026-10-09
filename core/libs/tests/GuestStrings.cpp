@@ -1,4 +1,5 @@
 #include "prx/libc/include/general/VabiMacros.hpp"
+#include <cstdint>
 #include <cstring>
 #include <cstdio>
 #include <cstdlib>
@@ -6,6 +7,7 @@
 
 extern "C" {
 char* APS5_VABI basename_nid_postfix(const char*);
+std::uint32_t APS5_VABI __inet_addr_nid_postfix(const char*);
 int* APS5_VABI __error_nid_postfix();
 std::size_t APS5_VABI strnlen_nid_postfix(const char*, std::size_t);
 std::size_t APS5_VABI strnlen_s_nid_postfix(const char*, std::size_t);
@@ -163,5 +165,31 @@ int main() {
     Require(strcasestr_nid_postfix("", "a") == nullptr);
     const char highBytes[] = {static_cast<char>(0xff), 'A', 0};
     Require(strcasestr_nid_postfix(highBytes, "a") == highBytes + 1);
+    const auto inetAddr = [](const char* text, const char* expected) {
+        const std::uint32_t address = __inet_addr_nid_postfix(text);
+        unsigned char bytes[4];
+        std::memcpy(bytes, &address, sizeof(bytes));
+        char formatted[16];
+        std::snprintf(formatted, sizeof(formatted), "%u.%u.%u.%u", bytes[0], bytes[1], bytes[2], bytes[3]);
+        return std::strcmp(formatted, expected) == 0;
+    };
+    Require(inetAddr("192.0.2.42", "192.0.2.42"));
+    Require(inetAddr("10.1.2", "10.1.0.2"));
+    Require(inetAddr("127.1", "127.0.0.1"));
+    Require(inetAddr("3232235777", "192.168.1.1"));
+    Require(inetAddr("0", "0.0.0.0"));
+    Require(inetAddr("0x7f.0.0.0x1", "127.0.0.1"));
+    Require(inetAddr("0X7F.1", "127.0.0.1"));
+    Require(inetAddr("0377.0.0.010", "255.0.0.8"));
+    Require(inetAddr("1.0xffffff", "1.255.255.255"));
+    Require(inetAddr("1.2.0xffff", "1.2.255.255"));
+    Require(inetAddr("4294967297", "0.0.0.1"));
+    Require(inetAddr("1.2.3.4 trailing", "1.2.3.4"));
+    Require(inetAddr("1.2.3.4\n", "1.2.3.4"));
+    Require(__inet_addr_nid_postfix("255.255.255.255") == 0xffffffff);
+    for (const char* invalid : {"", " 1.2.3.4", "1.2.3.4.5", "256.1.1.1", "1.2.3.256", "1.2.65536", "1.16777216", "08",
+             "1..2", "a.b.c.d", "1.2.3.4x", "0x", "1.0x", "1.2.3.", "-1"}) {
+        Require(__inet_addr_nid_postfix(invalid) == 0xffffffff);
+    }
     return CheckMemcpyOverlap() ? 0 : 1;
 }
