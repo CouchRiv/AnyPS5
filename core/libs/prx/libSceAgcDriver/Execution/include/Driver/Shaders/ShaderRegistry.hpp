@@ -49,6 +49,13 @@ struct PreparedShaderState {
 };
 struct PreparedShaders : PreparedShaderState {
     std::mutex mutex;
+    struct CodeHash {
+        std::size_t offset = ~std::size_t{0};
+        std::uint64_t hash = 0;
+    };
+    std::mutex codeHashMutex;
+    std::array<CodeHash, 4> codeHashes;
+    std::size_t nextCodeHash = 0;
 };
 
 struct RegisteredShaderState {
@@ -77,6 +84,8 @@ void PublishRegisteredShader(std::shared_ptr<ShaderRegistry>& registry, const st
 void ResolvePreparedGraphics(const ShaderSnapshot& front, const std::shared_ptr<const ShaderSnapshot>& fragment, std::uint32_t primitiveType, const ShaderRecompiler::SpirvTarget& target);
 
 ShaderRecompiler::RectListShaders PreparedRectangle(const ShaderSnapshot& snapshot, std::uint64_t vertexId, std::uint64_t fragmentId);
+
+std::uint64_t SnapshotCodeHash(const ShaderSnapshot& snapshot, std::size_t codeOffset);
 
 std::shared_ptr<const ShaderRecompiler::SourceHandle> SourceHandleFor(const ShaderSnapshot& snapshot, std::size_t codeOffset, const ShaderRecompiler::RecompileRequest& request);
 ShaderRecompiler::PreparedShaderInvocation InvocationFor(const ShaderSnapshot& snapshot, std::size_t codeOffset, const ShaderRecompiler::RecompileRequest& request);
