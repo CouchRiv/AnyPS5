@@ -64,7 +64,7 @@ void Run(AgcDriver::VulkanDevice& device) {
             auto binding = std::ranges::find_if(invalid.bindings, [](const DescriptorBinding& value) { return value.role == DescriptorRole::ShaderData; });
             Require(binding != invalid.bindings.end(), "bindless shader has no runtime metadata");
             const auto offset = invalid.imageMetadataDword + invalid.runtimeImageResources.at(0) * (sizeof(RuntimeAbi::ResourceMetadata) / sizeof(std::uint32_t)) + offsetof(RuntimeAbi::ResourceMetadata, firstElement) / sizeof(std::uint32_t);
-            binding->guestDescriptor.at(offset) = RuntimeAbi::SampledHeapCapacity;
+            binding->guestDescriptor.at(offset) = RuntimeAbi::BindlessTableSlots;
             bool rejected = false;
             try {
                 device.Dispatch(invalid, 1u, 1u, 1u);
