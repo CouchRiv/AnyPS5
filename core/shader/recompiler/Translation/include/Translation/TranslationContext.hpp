@@ -59,6 +59,9 @@ private:
     IrU32 packHalf2x16(IrF32 low, IrF32 high);
     void write16Bits(const RdnaOperand& operand, IrU32 value);
     void writeF16(const RdnaOperand& operand, IrF32 value, std::initializer_list<IrValue*> sources);
+    bool directedF16Rounding() const;
+    IrU32 convertF32ToF16Bits(IrF32 value, std::initializer_list<IrValue*> sources);
+    void writeF16Conversion(const RdnaOperand& operand, IrF32 value, std::initializer_list<IrValue*> sources);
     IrU32 readU32(const RdnaOperand& operand);
     IrU32 flushF32Denormal(IrU32 bits);
     IrF32 flushTinyProduct(IrValue* lhs, IrValue* rhs, IrValue* product, IrValue* addend = nullptr);
