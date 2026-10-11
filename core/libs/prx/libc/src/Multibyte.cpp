@@ -160,6 +160,7 @@ std::size_t APS5_VABI mbsrtowcs_nid_postfix(std::uint16_t* destination, const ch
 }
 
 std::size_t APS5_VABI mbstowcs_nid_postfix(std::uint16_t* dest, const char* src, std::size_t size) {
+    if (!dest && src) return std::strlen(src);
     return SonyMbstowcs(dest, src, size);
 }
 

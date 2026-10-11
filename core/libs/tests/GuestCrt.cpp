@@ -45,6 +45,16 @@ static void CountingHandler(const char* message, void* pointer, int error) {
     ++g_handlerCalls;
 }
 
+static void CheckMbstowcsLengthQuery() {
+    errno = 0;
+    Require(mbstowcs_nid_postfix(nullptr, "abc", 0) == 3);
+    Require(errno == 0);
+    std::uint16_t wide[8] = {};
+    Require(mbstowcs_nid_postfix(wide, "abc", 8) == 3);
+    Require(wide[0] == 'a' && wide[1] == 'b' && wide[2] == 'c' && wide[3] == 0);
+    Require(mbstowcs_nid_postfix(wide, "abc", 2) == 2);
+}
+
 int main() {
     Require(sceAmprFpclassifyd(std::numeric_limits<double>::quiet_NaN()) == 2);
     Require(sceAmprFpclassifyd(std::numeric_limits<double>::infinity()) == 1);
@@ -145,4 +155,5 @@ int main() {
     Require(sceAmprMbstowcs(nullptr, "ABC", 8) == 3);
     Require(sceAmprMbstowcs(wide, "ABC", 2) == 2);
     Require(mbstowcs_nid_postfix(wide, "ABC", 8) == 3);
+    CheckMbstowcsLengthQuery();
 }
